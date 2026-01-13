@@ -77,6 +77,7 @@ export default function MobileMegaMenu({
 
 	const handleLogout = () => {
 		setIsUserDropdownOpen(false)
+		localStorage.removeItem('uid')
 		localStorage.removeItem('phone')
 		localStorage.removeItem('city')
 		localStorage.removeItem('name')

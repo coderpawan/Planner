@@ -66,14 +66,13 @@ export default function BudgetPage() {
       setLoading(true)
       setError(null)
 
-      // 1. Get city from state or localStorage
+      // 1. Get city from state or localStorage, default to Bangalore
       let selectedCity = cityName
       if (!selectedCity) {
         selectedCity = localStorage.getItem('city')
         if (!selectedCity) {
-          setError('Please select a city first')
-          setLoading(false)
-          return
+          // Use Bangalore as default city for browsing
+          selectedCity = 'Bangalore, Karnataka'
         }
         setCityName(selectedCity)
       }

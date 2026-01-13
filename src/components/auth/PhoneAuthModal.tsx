@@ -96,8 +96,9 @@ export default function PhoneAuthModal({
         setStep('success');
         setTimeout(() => {
           onSuccess?.(phone);
-          handleClose();
-        }, 2000);
+          onClose();
+          window.location.reload();
+        }, 1000);
       } else {
         // Check in Realtime Database as fallback
         const rtdbRef = ref(db, 'users');
@@ -134,8 +135,9 @@ export default function PhoneAuthModal({
           setStep('success');
           setTimeout(() => {
             onSuccess?.(phone);
-            handleClose();
-          }, 2000);
+            onClose();
+            window.location.reload();
+          }, 1000);
         } else {
           // New user - go to profile step
           setIsExistingUser(false);
@@ -209,17 +211,6 @@ export default function PhoneAuthModal({
           createdAt: serverTimestamp(),
         };
         
-        // Save to Realtime DB (without unlockedServices array)
-        const rtdbData = {
-          uid: result.user.uid,
-          name,
-          city,
-          phoneNumber: result.user.phoneNumber,
-          role: 'User',
-          credits: 5,
-        };
-        await set(ref(db, `users/${result.user.uid}`), rtdbData);
-        
         // Save to Firestore Users collection (with unlockedServices)
         await setDoc(doc(firestore, 'Users', result.user.uid), {
           ...userData,
@@ -236,8 +227,10 @@ export default function PhoneAuthModal({
       setStep('success');
       setTimeout(() => {
         onSuccess?.(phone);
-        handleClose();
-      }, 2000);
+        onClose();
+        // Reload page after successful login to update UI
+        window.location.reload();
+      }, 1000);
     } catch {
       setMessage('OTP verification failed');
     } finally {
@@ -255,7 +248,7 @@ export default function PhoneAuthModal({
     setIsExistingUser(false);
     setConfirmationResult(null);
     onClose();
-    window.location.reload();
+    // No need to reload - user data is now in localStorage
   };
 
   if (!isOpen) return null;

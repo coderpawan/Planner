@@ -152,8 +152,7 @@ export default function ServiceDetailModal({ service, isOpen, onClose }: Service
 
   const handleAuthSuccess = () => {
     setShowPhoneAuthModal(false)
-    // Refresh the page to load user data
-    window.location.reload()
+    // No need to reload - user data is now in localStorage
   }
 
   const handleAddToCart = async () => {

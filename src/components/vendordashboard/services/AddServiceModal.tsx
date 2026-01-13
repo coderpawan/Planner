@@ -5,7 +5,7 @@ import { doc, getDoc } from 'firebase/firestore'
 import { firestore, storage } from '@/lib/firebase-config'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { MdClose, MdArrowForward, MdArrowBack, MdAdd, MdImage, MdDelete } from 'react-icons/md'
-import { saveVendorService } from '@/lib/firestore-services'
+import { saveVendorService, getCategoryLabelsMap } from '@/lib/firestore-services'
 import { normalizeCityId, normalizeServiceCategory, VendorServiceDoc } from '@/lib/firestore-utils'
 
 interface ServiceFormData {
@@ -58,21 +58,8 @@ type PricingUnit =
   | 'per_hour'
   | 'full_wedding'
 
-const CATEGORIES = {
-  venue: "Venues & Wedding Spaces",
-  catering: "Catering & Food Services",
-  decor: "Wedding Decor & Styling",
-  photography: "Photography & Videography",
-  makeup_styling: "Makeup, Mehendi & Styling",
-  music_entertainment: "Music, DJ & Entertainment",
-  choreography: "Choreography & Performances",
-  ritual_services: "Pandit, Priest & Ritual Services",
-  wedding_transport: "Wedding Transport & Baraat Services",
-  invitations_gifting: "Invitations, Gifts & Packaging",
-  wedding_planner: "Wedding Planning & Coordination"
-}
-
-// Replace PRICING_UNIT_BY_CATEGORY with fixed mapping
+// Categories will be loaded dynamically from Firestore
+// This is just kept for type reference in PRICING_UNIT_BY_CATEGORY
 const PRICING_UNIT_BY_CATEGORY: Record<ServiceCategory, PricingUnit> = {
   venue: 'per_day',
   wedding_planner: 'full_wedding',
@@ -222,6 +209,8 @@ export default function AddServiceModal({ isOpen, onClose, onSuccess, vendorId: 
   const [submitting, setSubmitting] = useState(false)
   const [vendorCities, setVendorCities] = useState<VendorCity[]>([])
   const [loadingCities, setLoadingCities] = useState(true)
+  const [categories, setCategories] = useState<Record<string, string>>({})
+  const [loadingCategories, setLoadingCategories] = useState(true)
 
   // Remove allowedPricingUnits state - no longer needed
 
@@ -254,8 +243,22 @@ export default function AddServiceModal({ isOpen, onClose, onSuccess, vendorId: 
   useEffect(() => {
     if (isOpen) {
       fetchVendorCities()
+      fetchCategories()
     }
   }, [isOpen])
+
+  const fetchCategories = async () => {
+    setLoadingCategories(true)
+    try {
+      const labelsMap = await getCategoryLabelsMap()
+      setCategories(labelsMap)
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+      alert('Failed to load service categories')
+    } finally {
+      setLoadingCategories(false)
+    }
+  }
 
   const fetchVendorCities = async () => {
     setLoadingCities(true)
@@ -749,16 +752,23 @@ export default function AddServiceModal({ isOpen, onClose, onSuccess, vendorId: 
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Service Category *</label>
-                <select
-                  value={formData.serviceCategory}
-                  onChange={(e) => updateField('serviceCategory', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg ${errors.serviceCategory ? 'border-red-500' : 'border-gray-300'}`}
-                >
-                  <option value="">Select category</option>
-                  {Object.entries(CATEGORIES).map(([key, label]) => (
-                    <option key={key} value={key}>{label}</option>
-                  ))}
-                </select>
+                {loadingCategories ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+                    <span className="ml-3 text-sm text-gray-600">Loading categories...</span>
+                  </div>
+                ) : (
+                  <select
+                    value={formData.serviceCategory}
+                    onChange={(e) => updateField('serviceCategory', e.target.value)}
+                    className={`w-full px-4 py-3 border rounded-lg ${errors.serviceCategory ? 'border-red-500' : 'border-gray-300'}`}
+                  >
+                    <option value="">Select category</option>
+                    {Object.entries(categories).map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                  </select>
+                )}
                 {errors.serviceCategory && <p className="text-sm text-red-600 mt-1">{errors.serviceCategory}</p>}
               </div>
 
@@ -990,7 +1000,7 @@ export default function AddServiceModal({ isOpen, onClose, onSuccess, vendorId: 
           {currentStep === 3 && (
             <div className="space-y-4">
               <h4 className="text-lg font-bold text-gray-900 mb-4">
-                {CATEGORIES[formData.serviceCategory as keyof typeof CATEGORIES]} - Specific Details
+                {categories[formData.serviceCategory] || formData.serviceCategory} - Specific Details
               </h4>
 
               {/* VENUE */}

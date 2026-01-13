@@ -3,27 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCart } from '@/lib/cartUtils'
-import { getServiceByIdCityCategory } from '@/lib/firestore-services'
+import { getServiceByIdCityCategory, getCategoryLabelsMap } from '@/lib/firestore-services'
 import { VendorServiceDoc } from '@/lib/firestore-utils'
 import CartServiceCard from '@/components/cart/CartServiceCard'
 import ServiceDetailModal from '@/components/budget/ServiceDetailModal'
 import PhoneAuthModal from '@/components/auth/PhoneAuthModal'
 import { MdShoppingCart } from 'react-icons/md'
-
-// Category display names mapping
-const CATEGORY_LABELS: { [key: string]: string } = {
-  venue: "Venues & Wedding Spaces",
-  catering: "Catering & Food Services",
-  decor: "Wedding Decor & Styling",
-  photography: "Photography & Videography",
-  makeup_styling: "Makeup, Mehendi & Styling",
-  music_entertainment: "Music, DJ & Entertainment",
-  choreography: "Choreography & Performances",
-  ritual_services: "Pandit, Priest & Ritual Services",
-  wedding_transport: "Wedding Transport & Baraat Services",
-  invitations_gifting: "Invitations, Gifts & Packaging",
-  wedding_planner: "Wedding Planning & Coordination"
-}
 
 interface GroupedServices {
   [category: string]: VendorServiceDoc[]
@@ -38,8 +23,19 @@ export default function CartPage() {
   const [selectedService, setSelectedService] = useState<VendorServiceDoc | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [authCheckComplete, setAuthCheckComplete] = useState(false)
+  const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>({})
   
   const { cart, isLoading: isLoadingCart, refreshCart } = useCart(uid)
+
+  // Fetch category labels on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const labels = await getCategoryLabelsMap()
+      setCategoryLabels(labels)
+    }
+    
+    fetchCategories()
+  }, [])
 
   // Check authentication
   useEffect(() => {
@@ -192,7 +188,7 @@ export default function CartPage() {
                   {/* Category Header */}
                   <div className="mb-6 pb-4 border-b border-gray-200">
                     <h2 className="text-2xl font-bold text-gray-900">
-                      {CATEGORY_LABELS[category] || category}
+                      {categoryLabels[category] || category}
                     </h2>
                     <p className="text-sm text-gray-600 mt-1">
                       {services.length} service{services.length !== 1 ? 's' : ''}

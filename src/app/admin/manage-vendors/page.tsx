@@ -8,6 +8,7 @@ import DeactivateVendorModal from '@/components/admin/ManageVendors/DeactivateVe
 import ReactivateVendorModal from '@/components/admin/ManageVendors/ReactivateVendorModal'
 import DeleteVendorModal from '@/components/admin/ManageVendors/DeleteVendorModal'
 import VendorDetailsModal from '@/components/admin/ManageVendors/VendorDetailsModal'
+import { getCategoryIds } from '@/lib/firestore-services'
 
 interface CityData {
   city: string
@@ -235,19 +236,7 @@ export default function ManageVendorsPage() {
       })
 
       // Disable vendor services across all cities
-      const categoryIds = [
-        'venue',
-      'catering',
-      'decor',
-      'photography',
-      'makeup_styling',
-      'music_entertainment',
-      'choreography',
-      'ritual_services',
-      'wedding_transport',
-      'invitations_gifting',
-      'wedding_planner'
-      ]
+      const categoryIds = await getCategoryIds()
 
       for (const cityObj of (vendor.citiesData || [])) {
         const cityId = normalizeCityId(cityObj.city)
@@ -316,19 +305,7 @@ export default function ManageVendorsPage() {
       })
 
       // Re-enable vendor services across all cities
-      const categoryIds = [
-        'venue',
-      'catering',
-      'decor',
-      'photography',
-      'makeup_styling',
-      'music_entertainment',
-      'choreography',
-      'ritual_services',
-      'wedding_transport',
-      'invitations_gifting',
-      'wedding_planner'
-      ]
+      const categoryIds = await getCategoryIds()
 
       for (const cityObj of (vendor.citiesData || [])) {
         const cityId = normalizeCityId(cityObj.city)
@@ -382,19 +359,7 @@ export default function ManageVendorsPage() {
       const deletedServiceIds: string[] = []
 
       // Delete vendor services across all cities
-      const categoryIds = [
-        'venue',
-      'catering',
-      'decor',
-      'photography',
-      'makeup_styling',
-      'music_entertainment',
-      'choreography',
-      'ritual_services',
-      'wedding_transport',
-      'invitations_gifting',
-      'wedding_planner'
-      ]
+      const categoryIds = await getCategoryIds()
 
       for (const cityObj of (vendor.citiesData || [])) {
         const cityId = normalizeCityId(cityObj.city)

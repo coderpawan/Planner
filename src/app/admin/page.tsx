@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore'
 import { firestore } from '@/lib/firebase-config'
+import { getCategoryLabelsMap } from '@/lib/firestore-services'
 import { 
   MdLocationCity, 
   MdAttachMoney, 
@@ -41,20 +42,6 @@ interface MonthlyGrowth {
   count: number
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  venue: "Venues & Wedding Spaces",
-  catering: "Catering & Food Services",
-  decor: "Wedding Decor & Styling",
-  photography: "Photography & Videography",
-  makeup_styling: "Makeup, Mehendi & Styling",
-  music_entertainment: "Music, DJ & Entertainment",
-  choreography: "Choreography & Performances",
-  ritual_services: "Pandit, Priest & Ritual Services",
-  wedding_transport: "Wedding Transport & Baraat Services",
-  invitations_gifting: "Invitations, Gifts & Packaging",
-  wedding_planner: "Wedding Planning & Coordination"
-}
-
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
     cities: 0,
@@ -69,9 +56,15 @@ export default function AdminDashboard() {
   const [monthlyGrowth, setMonthlyGrowth] = useState<MonthlyGrowth[]>([])
   const [recentVendors, setRecentVendors] = useState<VendorData[]>([])
   const [loading, setLoading] = useState(true)
+  const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>({})
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
+      // Fetch category labels first
+      const labels = await getCategoryLabelsMap()
+      setCategoryLabels(labels)
+      
+      // Then fetch stats
       try {
         const [
           citiesSnap, 
@@ -201,7 +194,7 @@ export default function AdminDashboard() {
       }
     }
 
-    fetchStats()
+    fetchData()
   }, [])
 
   if (loading) {
@@ -384,7 +377,7 @@ export default function AdminDashboard() {
               <div key={category} className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-100">
                 <p className="text-2xl font-bold text-purple-600 mb-1">{count}</p>
                 <p className="text-sm text-gray-700 font-medium">
-                  {CATEGORY_LABELS[category] || category.replace(/_/g, ' ')}
+                  {categoryLabels[category] || category.replace(/_/g, ' ')}
                 </p>
               </div>
             ))}
@@ -473,7 +466,7 @@ export default function AdminDashboard() {
                         <div key={cat} className="bg-orange-50 rounded-lg p-3 border border-orange-100">
                           <p className="text-lg font-bold text-orange-600">{count}</p>
                           <p className="text-xs text-gray-700">
-                            {CATEGORY_LABELS[cat] || cat.replace(/_/g, ' ')}
+                            {categoryLabels[cat] || cat.replace(/_/g, ' ')}
                           </p>
                         </div>
                       ))}

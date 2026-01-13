@@ -117,16 +117,20 @@ export default function VendorServicePage() {
 
 	// Initialize service category from slug
 	useEffect(() => {
-		if (params?.serviceSlug) {
-			const category = mapServiceSlugToCategory(params.serviceSlug as string)
-			setServiceCategory(category)
+		const loadCategory = async () => {
+			if (params?.serviceSlug) {
+				const category = await mapServiceSlugToCategory(params.serviceSlug as string)
+				setServiceCategory(category)
+			}
 		}
+		loadCategory()
 	}, [params?.serviceSlug])
 
 	// Check authentication and set city
 	useEffect(() => {
+		// Use city from localStorage or default to Bangalore
 		if (!city) {
-			setIsPhoneModalOpen(true)
+			setSelectedCity('Bangalore, Karnataka')
 		} else {
 			setSelectedCity(city)
 		}
@@ -140,7 +144,7 @@ export default function VendorServicePage() {
 			try {
 				setLoading(true)
 				const cityId = normalizeCityId(selectedCity)
-				const servicesRef = collection(firestore, 'vendor_services', cityId, serviceCategory.slug)
+				const servicesRef = collection(firestore, 'vendor_services', cityId, serviceCategory?.slug || '')
 				const q = query(servicesRef, where('active', '==', true))
 				const querySnapshot = await getDocs(q)
 
@@ -270,10 +274,10 @@ export default function VendorServicePage() {
 						<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
 							<div>
 								<h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-									{serviceCategory.name}
+									{serviceCategory?.name || 'Services'}
 								</h1>
 								<p className="text-gray-600">
-									{serviceCategory.description}
+									{serviceCategory?.description || ''}
 								</p>
 								{selectedCity && (
 									<p className="text-pink-600 font-medium mt-2">
@@ -315,7 +319,7 @@ export default function VendorServicePage() {
 								⚠️ Service Not Available
 							</h3>
 							<p className="text-red-700">
-								We are not currently serving <span className="font-semibold">{selectedCity}</span> for {serviceCategory.name.toLowerCase()}. 
+								We are not currently serving <span className="font-semibold">{selectedCity}</span> for {serviceCategory?.name?.toLowerCase() || 'this service'}. 
 								Please select another city to view available vendors.
 							</p>
 						</div>
@@ -409,7 +413,7 @@ export default function VendorServicePage() {
 								No Vendors Found
 							</h3>
 							<p className="text-gray-600">
-								No {serviceCategory.name.toLowerCase()} available in {selectedCity}
+								No {serviceCategory?.name?.toLowerCase() || 'services'} available in {selectedCity}
 							</p>
 							<p className="text-sm text-gray-500 mt-4">
 								Try selecting a different city or check back later
@@ -466,7 +470,7 @@ function ServiceCardCartButton({ service }: { service: VendorService }) {
 
 	const handleAuthSuccess = () => {
 		setShowPhoneAuthModal(false)
-		window.location.reload()
+		// No need to reload - user data is now in localStorage
 	}
 
 	return (
@@ -615,8 +619,7 @@ function ServiceDetailsModal({
 
 	const handleAuthSuccess = () => {
 		setShowPhoneAuthModal(false)
-		// Refresh the page to load user data
-		window.location.reload()
+		// No need to reload - user data is now in localStorage
 	}
 
 	const handleAddToCart = async () => {

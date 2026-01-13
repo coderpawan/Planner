@@ -6,7 +6,7 @@ import { firestore } from '@/lib/firebase-config'
 import { MdChevronLeft, MdChevronRight, MdEvent, MdArrowBack } from 'react-icons/md'
 import DateModal from '@/components/vendordashboard/services/DateModal'
 import { getServiceAvailability } from '@/lib/firestore-availability'
-import { getVendorService } from '@/lib/firestore-services'
+import { getVendorService, getCategoryIds } from '@/lib/firestore-services'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { 
   VendorServiceDoc, 
@@ -63,19 +63,8 @@ export default function AdminServiceCalendar({ params }: { params: { serviceId: 
       // Try to find the service across all cities and categories
       let foundService: VendorServiceDoc | null = null
       
-      const categoryIds = [
-        'venue',
-      'catering',
-      'decor',
-      'photography',
-      'makeup_styling',
-      'music_entertainment',
-      'choreography',
-      'ritual_services',
-      'wedding_transport',
-      'invitations_gifting',
-      'wedding_planner'
-      ]
+      // Fetch category IDs dynamically from Firestore
+      const categoryIds = await getCategoryIds()
 
       for (const cityObj of cities) {
         const cityId = normalizeCityId(cityObj.city)

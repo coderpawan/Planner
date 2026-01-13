@@ -125,20 +125,8 @@ export async function getVendorServices(vendorId: string): Promise<VendorService
     
     console.log('Vendor cities:', vendorCities)
     
-    // All possible service categories - matching CATEGORY_LABELS from page.tsx
-    const categoryIds = [
-      'venue',
-      'catering',
-      'decor',
-      'photography',
-      'makeup_styling',
-      'music_entertainment',
-      'choreography',
-      'ritual_services',
-      'wedding_transport',
-      'invitations_gifting',
-      'wedding_planner'
-    ]
+    // Fetch all possible service categories from Firestore
+    const categoryIds = await getCategoryIds()
     
     // Step 2: For each city the vendor operates in
     for (const cityObj of vendorCities) {
@@ -464,4 +452,92 @@ async function removeServiceFromUserEngagements(serviceId: string): Promise<void
     console.error('Error removing service from user_engagements:', error)
     // Don't throw - continue with other cleanup
   }
+}
+
+/**
+ * Service Categories - Fetched from Firestore
+ */
+
+export interface ServiceCategory {
+  categoryId: string
+  label: string
+}
+
+// Cache for categories to avoid repeated Firestore calls
+let categoriesCache: ServiceCategory[] | null = null
+let cacheTimestamp: number = 0
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+/**
+ * Fetches all service categories from Firestore with caching
+ */
+export async function getAllServiceCategories(): Promise<ServiceCategory[]> {
+  const now = Date.now()
+  
+  // Return cached data if still valid
+  if (categoriesCache && (now - cacheTimestamp) < CACHE_DURATION) {
+    return categoriesCache
+  }
+  
+  try {
+    const categoriesSnapshot = await getDocs(collection(firestore, 'ServiceCategories'))
+    const categories: ServiceCategory[] = []
+    
+    categoriesSnapshot.forEach((doc) => {
+      const data = doc.data()
+      categories.push({
+        categoryId: data.categoryId,
+        label: data.label
+      })
+    })
+    
+    // Update cache
+    categoriesCache = categories
+    cacheTimestamp = now
+    
+    return categories
+  } catch (error) {
+    console.error('Error fetching service categories:', error)
+    // Return empty array on error
+    return []
+  }
+}
+
+/**
+ * Gets the label for a specific category ID
+ */
+export async function getCategoryLabel(categoryId: string): Promise<string> {
+  const categories = await getAllServiceCategories()
+  const category = categories.find(cat => cat.categoryId === categoryId)
+  return category ? category.label : categoryId
+}
+
+/**
+ * Gets all category IDs
+ */
+export async function getCategoryIds(): Promise<string[]> {
+  const categories = await getAllServiceCategories()
+  return categories.map(cat => cat.categoryId)
+}
+
+/**
+ * Creates a category labels map (categoryId -> label)
+ */
+export async function getCategoryLabelsMap(): Promise<Record<string, string>> {
+  const categories = await getAllServiceCategories()
+  const labelsMap: Record<string, string> = {}
+  
+  categories.forEach(cat => {
+    labelsMap[cat.categoryId] = cat.label
+  })
+  
+  return labelsMap
+}
+
+/**
+ * Clears the categories cache (useful for testing or forcing refresh)
+ */
+export function clearCategoriesCache(): void {
+  categoriesCache = null
+  cacheTimestamp = 0
 }

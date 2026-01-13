@@ -6,26 +6,12 @@ import { MdCalendarToday, MdLocationOn, MdCategory, MdAdd, MdEdit, MdDelete, MdE
 import AddServiceModal from '@/components/vendordashboard/services/AddServiceModal'
 import EditServiceModal from '@/components/vendordashboard/services/EditServiceModal'
 import DeleteServiceModal from '@/components/vendordashboard/services/DeleteServiceModal'
-import { getVendorServices, updateServiceActiveStatus } from '@/lib/firestore-services'
+import { getVendorServices, updateServiceActiveStatus, getCategoryLabelsMap } from '@/lib/firestore-services'
 import { VendorServiceDoc } from '@/lib/firestore-utils'
 
 interface ServiceManagerProps {
   vendorId: string
   mode?: 'admin' | 'vendor'
-}
-
-const CATEGORY_LABELS: Record<string, string> = {
-  venue: "Venues & Wedding Spaces",
-  catering: "Catering & Food Services",
-  decor: "Wedding Decor & Styling",
-  photography: "Photography & Videography",
-  makeup_styling: "Makeup, Mehendi & Styling",
-  music_entertainment: "Music, DJ & Entertainment",
-  choreography: "Choreography & Performances",
-  ritual_services: "Pandit, Priest & Ritual Services",
-  wedding_transport: "Wedding Transport & Baraat Services",
-  invitations_gifting: "Invitations, Gifts & Packaging",
-  wedding_planner: "Wedding Planning & Coordination"
 }
 
 const PRICING_UNIT_LABELS: Record<string, string> = {
@@ -44,12 +30,22 @@ export default function ServiceManager({ vendorId, mode = 'vendor' }: ServiceMan
   const [showDeleteServiceModal, setShowDeleteServiceModal] = useState(false)
   const [selectedService, setSelectedService] = useState<VendorServiceDoc | null>(null)
   const [togglingServiceId, setTogglingServiceId] = useState<string | null>(null)
+  const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>({})
   const router = useRouter()
 
   useEffect(() => {
-    if (vendorId) {
-      fetchServices()
+    const fetchData = async () => {
+      // Fetch category labels
+      const labels = await getCategoryLabelsMap()
+      setCategoryLabels(labels)
+      
+      // Fetch services if vendorId exists
+      if (vendorId) {
+        fetchServices()
+      }
     }
+    
+    fetchData()
   }, [vendorId])
 
   const fetchServices = async () => {
@@ -192,7 +188,7 @@ export default function ServiceManager({ vendorId, mode = 'vendor' }: ServiceMan
                   <div className="flex items-center gap-2 text-gray-600">
                     <MdCategory className="text-purple-600" />
                     <span className="text-sm">
-                      {CATEGORY_LABELS[service.serviceCategory as keyof typeof CATEGORY_LABELS] || service.serviceCategory}
+                      {categoryLabels[service.serviceCategory] || service.serviceCategory}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-gray-600">

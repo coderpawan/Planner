@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { firestore, storage } from '@/lib/firebase-config'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { MdClose, MdArrowForward, MdArrowBack, MdImage, MdDelete, MdAdd } from 'react-icons/md'
-import { saveVendorService } from '@/lib/firestore-services'
+import { saveVendorService, getCategoryLabelsMap } from '@/lib/firestore-services'
 import { VendorServiceDoc } from '@/lib/firestore-utils'
 
 type ServiceCategory =
@@ -37,21 +37,7 @@ type PricingUnit =
   | 'per_hour'
   | 'full_wedding'
 
-const CATEGORIES = {
-  venue: "Venues & Wedding Spaces",
-  catering: "Catering & Food Services",
-  decor: "Wedding Decor & Styling",
-  photography: "Photography & Videography",
-  makeup_styling: "Makeup, Mehendi & Styling",
-  music_entertainment: "Music, DJ & Entertainment",
-  choreography: "Choreography & Performances",
-  ritual_services: "Pandit, Priest & Ritual Services",
-  wedding_transport: "Wedding Transport & Baraat Services",
-  invitations_gifting: "Invitations, Gifts & Packaging",
-  wedding_planner: "Wedding Planning & Coordination"
-}
-
-// Replace PRICING_UNIT_BY_CATEGORY with fixed mapping
+// Categories will be loaded dynamically from Firestore
 const PRICING_UNIT_BY_CATEGORY: Record<ServiceCategory, PricingUnit> = {
   venue: 'per_day',
   wedding_planner: 'full_wedding',
@@ -162,6 +148,8 @@ export default function EditServiceModal({ isOpen, onClose, onSuccess, service, 
   const [formData, setFormData] = useState<any>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
+  const [categories, setCategories] = useState<Record<string, string>>({})
+  const [loadingCategories, setLoadingCategories] = useState(true)
 
   // Image states
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([])
@@ -192,6 +180,10 @@ export default function EditServiceModal({ isOpen, onClose, onSuccess, service, 
   const [highlightsTags, setHighlightsTags] = useState<string[]>([])
 
   useEffect(() => {
+    if (isOpen) {
+      fetchCategories()
+    }
+    
     if (isOpen && service) {
       setFormData(service)
       setExistingImageUrls(service.images || [])
@@ -223,6 +215,19 @@ export default function EditServiceModal({ isOpen, onClose, onSuccess, service, 
       setHighlightsTags(service.highlights || [])
     }
   }, [isOpen, service])
+
+  const fetchCategories = async () => {
+    setLoadingCategories(true)
+    try {
+      const labelsMap = await getCategoryLabelsMap()
+      setCategories(labelsMap)
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+      alert('Failed to load service categories')
+    } finally {
+      setLoadingCategories(false)
+    }
+  }
 
   useEffect(() => {
     return () => {
@@ -629,7 +634,7 @@ export default function EditServiceModal({ isOpen, onClose, onSuccess, service, 
                 <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                 <input
                   type="text"
-                  value={CATEGORIES[formData.serviceCategory as keyof typeof CATEGORIES] || formData.serviceCategory || ''}
+                  value={categories[formData.serviceCategory] || formData.serviceCategory || ''}
                   disabled
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
                 />
@@ -805,7 +810,7 @@ export default function EditServiceModal({ isOpen, onClose, onSuccess, service, 
           {currentStep === 3 && (
             <div className="space-y-4">
               <h4 className="text-lg font-bold text-gray-900 mb-4">
-                {CATEGORIES[formData.serviceCategory as keyof typeof CATEGORIES] || formData.serviceCategory} - Specific Details
+                {categories[formData.serviceCategory] || formData.serviceCategory} - Specific Details
               </h4>
 
               {/* VENUE */}

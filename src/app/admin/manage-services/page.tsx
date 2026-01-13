@@ -6,6 +6,7 @@ import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firesto
 import { firestore } from '@/lib/firebase-config'
 import { MdSearch, MdStore, MdPhone, MdLocationOn, MdCheckCircle, MdBlock, MdCategory } from 'react-icons/md'
 import ServiceManager from '@/components/admin/ServiceManager'
+import { getCategoryLabelsMap } from '@/lib/firestore-services'
 
 interface CityData {
   city: string
@@ -23,20 +24,6 @@ interface VendorData {
   serviceCategories?: string[]
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  venue: "Venues & Wedding Spaces",
-  catering: "Catering & Food Services",
-  decor: "Wedding Decor & Styling",
-  photography: "Photography & Videography",
-  makeup_styling: "Makeup, Mehendi & Styling",
-  music_entertainment: "Music, DJ & Entertainment",
-  choreography: "Choreography & Performances",
-  ritual_services: "Pandit, Priest & Ritual Services",
-  wedding_transport: "Wedding Transport & Baraat Services",
-  invitations_gifting: "Invitations, Gifts & Packaging",
-  wedding_planner: "Wedding Planning & Coordination"
-}
-
 export default function ManageServicesPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -46,11 +33,22 @@ export default function ManageServicesPage() {
   const [notFound, setNotFound] = useState(false)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [initializing, setInitializing] = useState(true)
+  const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>({})
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message })
     setTimeout(() => setToast(null), 4000)
   }
+
+  // Fetch category labels on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const labels = await getCategoryLabelsMap()
+      setCategoryLabels(labels)
+    }
+    
+    fetchCategories()
+  }, [])
 
   // Load vendor from URL parameters on mount
   useEffect(() => {
@@ -292,7 +290,7 @@ export default function ManageServicesPage() {
                       <p className="text-sm text-gray-500">Service Categories</p>
                       <p className="font-medium">
                         {vendor.serviceCategories
-                          .map(cat => CATEGORY_LABELS[cat] || cat)
+                          .map(cat => categoryLabels[cat] || cat)
                           .join(', ')}
                       </p>
                     </div>

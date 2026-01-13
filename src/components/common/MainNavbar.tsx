@@ -250,6 +250,7 @@ export default function MainNavbar() {
 
 	const handleLogout = () => {
 		setIsUserDropdownOpen(false);
+		localStorage.removeItem("uid");
 		localStorage.removeItem("phone");
 		localStorage.removeItem("city");
 		localStorage.removeItem("name");

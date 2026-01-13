@@ -49,7 +49,7 @@ export default function ServiceCard({ service, onClick }: ServiceCardProps) {
 
   const handleAuthSuccess = () => {
     setShowPhoneAuthModal(false)
-    window.location.reload()
+    // No need to reload - user data is now in localStorage
   }
 
   const handleCardClick = (e: React.MouseEvent) => {
