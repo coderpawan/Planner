@@ -1,6 +1,5 @@
-import { ref, set, get, onValue, off } from 'firebase/database';
-import { doc, getDoc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db, firestore } from './firebase-config';
+import { doc, getDoc, updateDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { firestore } from './firebase-config';
 import { logUserEngagement } from './firestore-engagements';
 import { VendorServiceDoc } from './firestore-utils';
 
@@ -18,7 +17,7 @@ export interface UnlockedServicesDoc {
 
 /**
  * Initialize credits for a first-time user
- * Sets 5 credits in both Firestore and Realtime DB
+ * Sets 5 credits in Firestore
  */
 export async function initializeUserCredits(uid: string): Promise<void> {
   try {
@@ -42,16 +41,6 @@ export async function initializeUserCredits(uid: string): Promise<void> {
     if (!unlockedServicesDoc.exists()) {
       await setDoc(unlockedServicesDocRef, {
         services: []
-      });
-    }
-
-    // Set in Realtime DB for real-time updates (only credits, not arrays)
-    const creditsRef = ref(db, `users/${uid}`);
-    const snapshot = await get(creditsRef);
-    
-    if (!snapshot.exists()) {
-      await set(creditsRef, {
-        credits: 5
       });
     }
   } catch (error) {
@@ -101,30 +90,33 @@ export async function getUnlockedServices(uid: string): Promise<string[]> {
 }
 
 /**
- * Subscribe to real-time credit updates from Realtime DB
- * Only tracks credits (number), unlockedServices fetched from Firestore
+ * Subscribe to real-time credit updates from Firestore
  */
 export function subscribeToCredits(
   uid: string,
   callback: (credits: number) => void
 ): () => void {
-  const creditsRef = ref(db, `users/${uid}/credits`);
+  const userDocRef = doc(firestore, 'Users', uid);
   
-  console.log('🔹 subscribeToCredits: Setting up listener for:', uid);
+  console.log('🔹 subscribeToCredits: Setting up Firestore listener for:', uid);
   
-  const unsubscribe = onValue(creditsRef, (snapshot) => {
+  const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
     if (snapshot.exists()) {
-      const credits = snapshot.val();
-      console.log('🔹 subscribeToCredits: Received data from Realtime DB:', credits);
-      callback(credits ?? 0);
+      const data = snapshot.data();
+      const credits = data.credits ?? 0;
+      console.log('🔹 subscribeToCredits: Received data from Firestore:', credits);
+      callback(credits);
     } else {
-      console.log('🔸 subscribeToCredits: No data found in Realtime DB for:', uid);
+      console.log('🔸 subscribeToCredits: No data found in Firestore for:', uid);
       callback(0);
     }
+  }, (error) => {
+    console.error('🔴 subscribeToCredits: Error in Firestore listener:', error);
+    callback(0);
   });
 
   // Return cleanup function
-  return () => off(creditsRef, 'value', unsubscribe);
+  return unsubscribe;
 }
 
 /**
@@ -164,7 +156,7 @@ export async function canViewContact(
 
 /**
  * Deduct 1 credit from user and unlock a service
- * Updates both Firestore and Realtime DB
+ * Updates Firestore only
  * Logs user engagement if role is "user" or "vendor"
  */
 export async function deductCredit(
@@ -219,10 +211,6 @@ export async function deductCredit(
     await setDoc(unlockedServicesDocRef, {
       services: newUnlockedServices
     });
-
-    // Update only credits in Realtime DB (preserve name, city, phoneNumber, role)
-    const creditsRef = ref(db, `users/${uid}/credits`);
-    await set(creditsRef, newCredits);
 
     // 🎯 LOG USER ENGAGEMENT (if not Admin)
     if (service && userRole && (userRole === 'User' || userRole === 'Vendor')) {
