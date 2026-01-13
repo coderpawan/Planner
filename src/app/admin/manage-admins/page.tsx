@@ -25,6 +25,8 @@ export default function ManageAdminsPage() {
   const [loading, setLoading] = useState(true);
   const [currentAdminData, setCurrentAdminData] = useState<any>(null);
   const [isAdminLoading, setIsAdminLoading] = useState(true);
+  const [initError, setInitError] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
   
   // Search state
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -39,20 +41,53 @@ export default function ManageAdminsPage() {
   const [pendingAction, setPendingAction] = useState<'promote' | 'demote' | 'activate' | 'deactivate' | null>(null);
   const [toastMessage, setToastMessage] = useState('');
   
+  // Client-side mounting check
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Listen to auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    if (!isMounted) return;
+
+    // Check if Firebase is initialized
+    if (!auth || !firestore) {
+      console.error('Firebase not initialized');
+      setInitError('Firebase initialization failed. Please refresh the page.');
       setLoading(false);
-    });
-    
-    return () => unsubscribe();
-  }, []);
+      setIsAdminLoading(false);
+      return;
+    }
+
+    try {
+      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        console.log('Auth state changed:', currentUser ? 'User logged in' : 'No user');
+        setUser(currentUser);
+        setLoading(false);
+      });
+      
+      return () => unsubscribe();
+    } catch (error) {
+      console.error('Auth state error:', error);
+      setInitError('Authentication error. Please refresh the page.');
+      setLoading(false);
+      setIsAdminLoading(false);
+    }
+  }, [isMounted]);
   
   // Fetch current admin data
   useEffect(() => {
+    if (!isMounted) return;
+
     const fetchCurrentAdmin = async () => {
       if (!user) {
+        setIsAdminLoading(false);
+        return;
+      }
+
+      if (!firestore) {
+        console.error('Firestore not initialized');
+        setInitError('Database connection failed. Please refresh the page.');
         setIsAdminLoading(false);
         return;
       }
@@ -65,16 +100,18 @@ export default function ManageAdminsPage() {
           console.log('Current admin data loaded:', { uid: user.uid, role: userData.role });
         } else {
           console.error('User document not found');
+          setInitError('User data not found. Please contact support.');
         }
       } catch (error) {
         console.error('Error fetching admin data:', error);
+        setInitError('Failed to load user data. Please refresh the page.');
       } finally {
         setIsAdminLoading(false);
       }
     };
     
     fetchCurrentAdmin();
-  }, [user, router]);
+  }, [user, isMounted]);
   
   // Handle search
   const handleSearch = async (e: React.FormEvent) => {
@@ -252,6 +289,11 @@ export default function ManageAdminsPage() {
     }
   };
   
+  // Don't render anything until mounted (prevents SSR issues)
+  if (!isMounted) {
+    return null;
+  }
+
   // Loading state
   if (loading || isAdminLoading) {
     return (
@@ -263,10 +305,49 @@ export default function ManageAdminsPage() {
       </div>
     );
   }
+
+  // Error state
+  if (initError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
+          <div className="text-red-500 text-5xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Initialization Error
+          </h2>
+          <p className="text-gray-600 mb-6">{initError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-2 rounded-lg transition-colors duration-200"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
   
   // Not authenticated
   if (!user || !currentAdminData) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
+          <div className="text-gray-400 text-5xl mb-4">🔒</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Access Denied
+          </h2>
+          <p className="text-gray-600 mb-6">
+            You need to be logged in as an admin to access this page.
+          </p>
+          <button
+            onClick={() => router.push('/login')}
+            className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-2 rounded-lg transition-colors duration-200"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
   }
   
   return (
