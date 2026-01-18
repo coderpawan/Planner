@@ -34,6 +34,8 @@ export default function PhoneAuthModal({
   const [city, setCity] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [isExistingUser, setIsExistingUser] = useState(false);
   const [role, setRole] = useState('User');
 
@@ -61,7 +63,7 @@ export default function PhoneAuthModal({
       return;
     }
 
-    setLoading(true);
+    setSendingOtp(true);
     setMessage('');
 
     const phoneNumber = `+91${phone}`;
@@ -148,7 +150,7 @@ export default function PhoneAuthModal({
       console.error('Error checking user:', error);
       setMessage('Error checking user. Please try again.');
     } finally {
-      setLoading(false);
+      setSendingOtp(false);
     }
   };
 
@@ -194,7 +196,7 @@ export default function PhoneAuthModal({
       return;
     }
 
-    setLoading(true);
+    setVerifyingOtp(true);
     setMessage('');
 
     try {
@@ -234,7 +236,7 @@ export default function PhoneAuthModal({
     } catch {
       setMessage('OTP verification failed');
     } finally {
-      setLoading(false);
+      setVerifyingOtp(false);
     }
   };
 
@@ -288,10 +290,10 @@ export default function PhoneAuthModal({
 
             <button
               onClick={handleSendOtp}
-              disabled={loading}
-              className="w-full rounded-full bg-gradient-to-r from-pink-500 to-purple-600 py-3 text-white font-semibold disabled:opacity-50"
+              disabled={sendingOtp}
+              className="w-full rounded-full bg-gradient-to-r from-pink-500 to-purple-600 py-3 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Checking...' : 'Send OTP'}
+              {sendingOtp ? 'Please wait...' : 'Send OTP'}
             </button>
           </div>
         )}
@@ -314,9 +316,10 @@ export default function PhoneAuthModal({
 
             <button
               onClick={handleContinueToOtp}
-              className="w-full rounded-full bg-gradient-to-r from-pink-500 to-purple-600 py-3 text-white font-semibold"
+              disabled={loading}
+              className="w-full rounded-full bg-gradient-to-r from-pink-500 to-purple-600 py-3 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Continue to OTP
+              {loading ? 'Processing...' : 'Continue to OTP'}
             </button>
           </div>
         )}
@@ -335,10 +338,10 @@ export default function PhoneAuthModal({
 
             <button
               onClick={handleVerifyOtp}
-              disabled={loading}
-              className="w-full rounded-full bg-gradient-to-r from-pink-500 to-purple-600 py-3 text-white font-semibold disabled:opacity-50"
+              disabled={verifyingOtp}
+              className="w-full rounded-full bg-gradient-to-r from-pink-500 to-purple-600 py-3 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Verifying...' : 'Verify OTP'}
+              {verifyingOtp ? 'Verifying...' : 'Verify OTP'}
             </button>
           </div>
         )}
